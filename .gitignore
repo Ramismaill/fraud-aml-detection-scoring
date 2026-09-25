@@ -1,0 +1,20 @@
+# Data files — never commit (licence + size)
+*.csv
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.zip
+raw/
+lake/
+work/
+data/
+
+# Jupyter / Python
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# OS / editors
+Thumbs.db
+.DS_Store
+.vscode/

@@ -1,0 +1,16 @@
+pandas==2.3.3
+numpy==2.4.6
+pyarrow==25.0.1
+duckdb==1.5.5
+polars==1.44.2
+lightgbm==4.7.0
+scikit-learn==1.9.1
+pyod==3.6.6
+shap==0.51.0
+mlxtend==0.25.0
+matplotlib==3.11.2
+seaborn==0.13.2
+networkx==3.6.1
+kaggle==2.2.4
+jupyter==1.1.1
+ipykernel==7.3.0
