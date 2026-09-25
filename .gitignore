@@ -18,3 +18,8 @@ __pycache__/
 Thumbs.db
 .DS_Store
 .vscode/
+
+# Secrets — never commit
+.kaggle/
+access_token
+.env
