@@ -1,4 +1,18 @@
-Day 2 notes:
+\# M1 Pilot — Daily Log
+
+
+
+| Day | Date | Notebook(s) | Status | Wall time | Peak RAM | Blocker | Next |
+
+|---|---|---|---|---|---|---|---|
+
+| 1 | 2026-09-25 | 00\_setup, 01\_download | done | download 66 s (725 MB); row counts verified | 0.27 GB | none | 02\_audit\_baf |
+
+| 2 | 2026-09-26 | 02\_audit\_baf | done | read 2.4 s; parquet write 2.3 s; 69.5 MB | 1.00 GB | none | 03\_audit\_aml |
+
+
+
+\## Day 2 notes
 
 \- Negative-valued columns confirmed: five community-listed columns use -1 only; credit\_risk\_score and velocity\_6h have real negative values.
 
