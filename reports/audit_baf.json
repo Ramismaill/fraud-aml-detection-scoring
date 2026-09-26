@@ -1,0 +1,58 @@
+{
+  "rows": 1000000,
+  "cols_raw": 32,
+  "fraud_total": 11029,
+  "prevalence_by_split": {
+    "test": 0.01404,
+    "train": 0.00998,
+    "valid": 0.01183
+  },
+  "negative_rate": {
+    "prev_address_months_count": 0.71292,
+    "current_address_months_count": 0.00425,
+    "bank_months_count": 0.25363,
+    "session_length_in_minutes": 0.00201,
+    "device_distinct_emails_8w": 0.00036,
+    "intended_balcon_amount": 0.74252,
+    "credit_risk_score": 0.01444,
+    "velocity_6h": 4e-05
+  },
+  "fraud_rate_neg_vs_nonneg": {
+    "prev_address_months_count": [
+      0.01421,
+      0.00312
+    ],
+    "current_address_months_count": [
+      0.00329,
+      0.01106
+    ],
+    "bank_months_count": [
+      0.01632,
+      0.00923
+    ],
+    "session_length_in_minutes": [
+      0.00893,
+      0.01103
+    ],
+    "device_distinct_emails_8w": [
+      0.01114,
+      0.01103
+    ],
+    "intended_balcon_amount": [
+      0.01313,
+      0.00498
+    ],
+    "credit_risk_score": [
+      0.00388,
+      0.01113
+    ],
+    "velocity_6h": [
+      0.0,
+      0.01103
+    ]
+  },
+  "constant_cols_dropped": [
+    "device_fraud_count"
+  ],
+  "duplicates": 0
+}
