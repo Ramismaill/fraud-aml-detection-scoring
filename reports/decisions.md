@@ -161,3 +161,23 @@ Cross-dataset transfer is out of scope for this pilot.
   2026-09-25 (handoff said CC BY-NC-ND). Non-commercial: this project is a
   research/feasibility artifact; any production use needs a separate licensing
   review. Data is never committed.
+
+## DECISION #2b — AML PASS rule tightened (Muhammet, 2026-09-26, before any model result)
+- AML PASS requires ALL of:
+  1. Rolling features past-only; chronological 60/20/20 split (no random split).
+  2. PR-AUC >= max(0.01, 5 x AML test prevalence)   [mandatory]
+  3. At least one of: Recall@5%FPR >= 0.20 | minority-class F1 >= 0.10
+  4. Lower bound of the 95% block-bootstrap CI of PR-AUC > AML test prevalence.
+- Replaces the AML "one of three" rule in DECISION #2. BAF rule unchanged.
+- If criteria 1-3 hold but criterion 4 fails, the verdict is CONDITIONAL, not FAIL
+  (test sample too small to separate from chance: a feasibility finding).
+- Bootstrap: resample time blocks, not rows (same-account, same-period transactions
+  are dependent). Block size chosen so that the test set has 40-400 blocks: daily
+  if the test period spans >= 40 days, otherwise hourly. Fixed from the audit
+  (03_audit_aml) before modelling. 200 resamples.
+- Thresholds: Recall@5%FPR is a ranking metric computed on test (as in the BAF paper).
+  The F1 decision threshold and risk-band cut-offs are chosen on validation only
+  and then applied unchanged to test.
+- Reported, not gating: Precision@100, Precision@500, lift vs test prevalence.
+- 06_anomaly: add flag velocity_6h_invalid_negative and check that the 44
+  impossible values do not dominate IF/COPOD top-ranked anomalies.
