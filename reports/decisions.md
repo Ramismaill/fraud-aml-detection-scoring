@@ -181,3 +181,36 @@ Cross-dataset transfer is out of scope for this pilot.
 - Reported, not gating: Precision@100, Precision@500, lift vs test prevalence.
 - 06_anomaly: add flag velocity_6h_invalid_negative and check that the 44
   impossible values do not dominate IF/COPOD top-ranked anomalies.
+
+
+## DECISION #6 — AML split, evaluation window and time features (2026-09-26, from audit, before any feature or model)
+- Audit (03_audit_aml): 5,078,345 tx; 5,177 laundering (0.1019%, equal to the 1/981 ratio).
+  Time range 2022-09-01 00:00 -> 2022-09-18 16:18 (17.68 days); normal traffic ends
+  2022-09-10. Tail 2022-09-11 -> 09-18: 1,108 tx, 655 laundering (59.1%), 100% ACH;
+  398 of 403 tail source accounts were active before the tail, 5 have no earlier history.
+  Interpretation: consistent with the generator completing laundering patterns started
+  earlier; the paper table in the handoff lists HI-Small as 10 days (not re-verified
+  from the paper). Hypothesis, not proven.
+- Split: chronological by transaction share. cut60 = 2022-09-06 13:36,
+  cut80 = 2022-09-08 16:12 (rows with ts < cut go to the earlier split); these two
+  timestamps define the split.
+  train 3,046,861 (0.0754%) | valid 1,015,602 (0.1065%) | test 1,015,882 (0.1770%).
+- Evaluation window: gating metrics are computed on test_core = test with
+  ts < 2022-09-11: 1,014,774 tx, 1,143 laundering (0.1126%), 56 hourly blocks.
+  Full-test metrics are reported for comparison with the paper but do not gate.
+  The tail is kept in the data, not deleted.
+- Finding: the higher full-test prevalence is attributable to the tail; within the
+  normal-traffic window, prevalence (0.1126%) is close to validation (0.1065%).
+- AML PASS (full rule from #2b, on test_core): PR-AUC >= max(0.01, 5 x 0.001126) = 0.01
+  AND (Recall@5%FPR >= 0.20 OR minority-F1 >= 0.10) AND lower bound of the 95%
+  hourly block-bootstrap CI of PR-AUC > 0.001126. If only the CI criterion fails,
+  verdict is CONDITIONAL, not FAIL. The 5x rule gives 0.0056, so the 0.01 floor
+  binds: effective bar is about 8.9x prevalence.
+- Time features: hour_of_day allowed (tail laundering share is roughly flat across
+  hours in the audit). No absolute-time features (date, day index, time since dataset
+  start). No day_of_week in the pilot (train has one weekend; test_core ends on a
+  Saturday). No cumulative counts since dataset start: rolling windows only (1h/24h/7d).
+- Limitation: the 5 tail-only source accounts cannot be scored with any history.
+- Alternatives rejected: gating on full test (affected by the tail); deleting the tail
+  everywhere (loses comparability); calendar-day split (test would be mostly tail).
+- Any change after this point is recorded as #6a, not by editing #6.

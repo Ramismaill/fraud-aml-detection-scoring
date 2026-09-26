@@ -20,3 +20,7 @@
 
 - Temporal variation in missing-code prevalence assessed as a feature-distribution shift indicator; bank_months_count is lower in month 0 only.
 
+
+## Day 3 notes (in progress)
+- AML audit: normal traffic ends 2022-09-10; the 2022-09-11 to 09-18 tail (1,108 tx, 59% laundering) sits entirely in test.
+- test_core prevalence (0.1126%) is close to valid (0.1065%): the apparent train->test rise on AML is attributable to the tail.
