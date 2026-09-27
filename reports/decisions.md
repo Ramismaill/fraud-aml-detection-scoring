@@ -234,3 +234,27 @@ Cross-dataset transfer is out of scope for this pilot.
   chronological split -> leakage prevention -> success criteria fixed before results
   -> BAF and AML evaluated independently -> separate ranked queues -> risk bands +
   SHAP -> PASS / CONDITIONAL / FAIL.
+
+
+## DECISION #8 — BAF baseline: features, model, procedure (2026-09-27, before any training)
+- Order: (1) DECISION #5 A/B/C compared on validation (month 5); (2) the winner's model
+  from that round is the final model, no retraining (deterministic, same seed);
+  (3) test (months 6-7) evaluated once. Month 5 serves both early stopping and the
+  A/B/C choice: one validation split, not independent confirmation.
+- Features: all raw columns except fraud_bool and month (month = absolute time index):
+  29 raw. 5 categorical columns (identified in 02_audit_baf) as native LightGBM
+  category. Flags <col>_is_missing (v < 0) for the 5 columns coded with -1, in every
+  variant. credit_risk_score and velocity_6h have real negatives: kept raw, no flag.
+  intended_balcon_amount: A = raw (34 features); B = raw + flag (35);
+  C = NaN when v < 0 + flag (35). No engineered features in the baseline.
+- Model: lightgbm.train (native API), LightGBM 4.7.0, objective=binary,
+  learning_rate=0.05, num_leaves=63, min_child_samples=100, feature_fraction=0.8,
+  bagging_fraction=0.8, bagging_freq=1, up to 2000 rounds, early stopping 100 rounds
+  on validation average_precision; best_iteration reported.
+- Imbalance: no class weighting. BAF paper settings are not replicated or claimed.
+- Reproducibility: seed=42, deterministic=True, force_col_wise=True, num_threads=8.
+- Early-stopping metric = LightGBM average_precision; reported PR-AUC = sklearn
+  average_precision_score (small differences possible, reported if > 1e-3).
+- Reported on test: src.metrics.summary (PR-AUC, Recall@5%FPR, Precision@100/500,
+  Lift@1%) and the FPR ratio customer_age >= 50 vs < 50 at the 5%-FPR threshold
+  chosen on validation (group cut-off 50 from the handoff, section 5.1). Report only.

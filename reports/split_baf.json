@@ -1,0 +1,31 @@
+{
+  "train": {
+    "months": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "n": 675666,
+    "n_fraud": 6740,
+    "prevalence": 0.00998
+  },
+  "valid": {
+    "months": [
+      5
+    ],
+    "n": 119323,
+    "n_fraud": 1411,
+    "prevalence": 0.01183
+  },
+  "test": {
+    "months": [
+      6,
+      7
+    ],
+    "n": 205011,
+    "n_fraud": 2878,
+    "prevalence": 0.01404
+  }
+}
