@@ -258,3 +258,11 @@ Cross-dataset transfer is out of scope for this pilot.
 - Reported on test: src.metrics.summary (PR-AUC, Recall@5%FPR, Precision@100/500,
   Lift@1%) and the FPR ratio customer_age >= 50 vs < 50 at the 5%-FPR threshold
   chosen on validation (group cut-off 50 from the handoff, section 5.1). Report only.
+
+
+### DECISION #5 — outcome (2026-09-27)
+- Validation PR-AUC: A 0.1852, B 0.1831, C 0.1878; all within the 5% margin -> A kept
+  by the pre-registered simplicity rule.
+- The recorded prediction (A ~ B > C) was not confirmed: C scored nominally highest.
+  Null result: the representation of intended_balcon_amount has no measurable effect
+  on the tree model at this sample size.
