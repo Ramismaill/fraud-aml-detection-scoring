@@ -266,3 +266,151 @@ Cross-dataset transfer is out of scope for this pilot.
 - The recorded prediction (A ~ B > C) was not confirmed: C scored nominally highest.
   Null result: the representation of intended_balcon_amount has no measurable effect
   on the tree model at this sample size.
+
+
+## DECISION #9 — AML baseline: past-only features and model (2026-09-27, before any AML feature code)
+Unit = one transaction t (src, dst, ts). Split and test_core as in #6. Every row is
+scored (self-loops and tail included); gating uses test_core only.
+1. Past-only: every aggregate for t uses only transactions with ts < t.ts (strictly
+   earlier minute); same-minute rows and t itself are excluded. History may cross
+   split boundaries backwards only.
+2. Amounts: u_c = USD value of one unit of currency c, u_USD = 1. From TRAIN-period
+   cross-currency transfers, median(amt_received / amt_paid) per (pay_ccy, recv_ccy)
+   pair = u_pay / u_recv; log u_c solved by least squares over all pairs (covers
+   currencies without a direct USD pair). amt_usd = amt_paid * u_pay_ccy, used for all
+   sums. Fixed train-only rates ignore any real exchange-rate drift over time
+   (limitation). If a currency is not connected to USD: no conversion; use
+   log(amt_paid) + pay_ccy instead, recorded as #9a.
+3. Self-loops (src = dst): kept, scored, flagged is_self_loop; excluded from every
+   account and pair aggregate.
+4. Features (exactly 33, asserted in code):
+   Sender src, windows 1h/24h/7d: out_cnt, out_sum_usd, in_cnt, in_sum_usd (12).
+   Sender 24h: n_unique_dst_out, n_unique_src_in, pass_through_24h = out_sum/in_sum
+   (NULL if in_sum = 0); mins_since_last_in (4).
+   Receiver dst, windows 1h/24h/7d: in_cnt, in_sum_usd (6). Receiver 24h:
+   n_unique_src_in, out_cnt_24h (2).
+   Pair: pair_cnt_7d = earlier transfers src -> dst (directional) (1).
+   Ages: src_age_hours, dst_age_hours = t.ts - MIN(ts) over rows with ts < t.ts where
+   the account appears as src OR dst (2).
+   Transaction: log_amount_usd, pay_format (cat), pay_ccy (cat), is_cross_ccy,
+   hour_of_day (integer), is_self_loop (6).
+   The 7d window is effectively expanding inside the 5.6-day train period.
+5. Cold start: counts = 0; sums, ratios, mins_since_last_in, ages = NULL.
+6. Forbidden: is_laundering in any feature; from_bank, to_bank, account IDs; ts, date,
+   day index, day_of_week, time since dataset start; Patterns.txt; accounts.csv;
+   whole-period graph measures (degree, PageRank, communities) - the most common AML
+   leakage source, because they use future edges by construction.
+7. Order: FX rates (train only) -> event table without self-loops -> windowed
+   aggregates -> join back to transactions -> cold-start fill -> assert 33 features
+   -> split by #6 timestamps.
+8. Leakage checks: (a) 20 random rows recomputed in pandas from strictly earlier rows:
+   values AND the number of rows used must equal DuckDB (counts); (b) label-permutation
+   test; (c) rows at the first dataset minute have all counts = 0.
+9. Model: LightGBM settings of #8, no class weighting; train split only; early
+   stopping on validation average_precision. F1 threshold = F1 maximiser on
+   VALIDATION, applied unchanged to test_core; no threshold is chosen on test.
+10. Evaluation once. Gating on test_core per #2b/#6: PR-AUC >= 0.01 AND
+    (Recall@5%FPR >= 0.20 OR F1 >= 0.10) AND hourly block-bootstrap 95% CI lower
+    bound of PR-AUC > 0.001126 (= 1,143 / 1,014,774), 200 resamples. Full test reported.
+11. Limitation: history depth grows over time; early train rows have shallower history
+    than validation/test rows. A property of chronological data, not leakage.
+12. Reproducibility: DuckDB and LightGBM versions written to results_aml_baseline.json.
+    Time-box (#2): feature building > 1 working day -> CONDITIONAL.
+
+
+## DECISION #9a — Amendments to #9 (2026-09-27, before any AML feature code)
+- Naming (Muhammet): mins_since_last_in -> mins_since_last_inflow;
+  src_age_hours / dst_age_hours -> src_observed_age_hours / dst_observed_age_hours
+  (time since first OBSERVED transaction; real account opening dates are unknown).
+- Naming (DeepSeek review): the duplicate name n_unique_src_in is resolved to
+  src_n_senders_in_24h (Sender side) and dst_n_senders_in_24h (Receiver side).
+  Feature count unchanged (33 base + 1 added below = 34).
+- Added feature (Muhammet): amt_over_inflow_24h = amt_usd of t / src in_sum_usd over
+  the past 24h (NULL if in_sum = 0). Uses only information known at t. Count: 34.
+- Window definition: a W-window for t covers ts in [t.ts - W, t.ts) at minute resolution.
+- FX stability (Muhammet): rates estimated on day 1 (2022-09-01) are compared with
+  rates from the whole train period; if any currency differs by more than 1%, the
+  #9 fallback (log(amt_paid) + pay_ccy, no cross-currency sums) is used.
+- Edge-case leakage tests: first transaction of an account, same-minute transfers,
+  a transfer exactly W before t, self-loop, high-activity account.
+- Diagnostic (report only): ablation model without pay_format (ACH carries 4,483 of
+  5,177 laundering). Large drop -> model relies mostly on a generator rule; reported
+  as a limitation, does not change the PASS rule.
+- Diagnostic (report only): 4-hour moving-block bootstrap CI next to the pre-registered
+  1-hour CI; number of test_core hours with laundering and share of the busiest hour.
+- Framing: Recall@5%FPR = benchmark comparison metric; Precision@K = operational metric.
+- For 06: RobustScaler and any imputation are fit on train only.
+
+
+## DECISION #9b — mins_since_last_inflow is all-time, not 24h-capped (2026-09-27, before Cell 4b)
+- #9 point 4 lists mins_since_last_inflow under the Sender 24h block, but it carries
+  no _24h suffix; semantics: minutes since the most recent prior inflow (dst = account),
+  at any time before t.ts, not capped to 24h.
+- Reason: capping removes information the tree can use directly (it can split on any
+  threshold, e.g. <=60, <=1440); the AML-relevant recency window is learned, not imposed.
+  pass_through_24h and amt_over_inflow_24h remain windowed (they are ratios against
+  24h sums, not raw recency).
+- NULL if the account has no prior inflow (cold start).
+- Implementation: MAX(prev_ts) over rows where dst = account AND prev_ts <= t.ts - 1 minute
+  (same-minute and self-loop inflows excluded, consistent with #9's same-minute rule).
+- Distribution note: early-train rows are bounded by dataset start (not full history);
+  this is the expanding-window limitation already noted in #9 point 11, not leakage.
+
+
+## DECISION #9c — fan-out/fan-in 24h redefined as new-counterparty count, not true distinct (2026-09-27, after OOM on self-join)
+- Original #9 point 4: n_unique_dst_out (fan-out), n_unique_src_in (fan-in) as
+  COUNT(DISTINCT counterparty) over 24h.
+- Problem: a self-join within the 24h window to compute COUNT(DISTINCT) cross-multiplies
+  matched outflow rows by matched inflow rows per t (double LEFT JOIN), producing fan-out
+  proportional to activity^2 for high-activity accounts; this exhausted 18.6GB DuckDB temp
+  space (OutOfMemoryException) after ~17 minutes.
+- A correlated-subquery alternative was cost-estimated at ~3 hours (5M rows x 2 subqueries
+  x ~1ms each even with indexes), exceeding the #9 point 10 time-box.
+- Decision: redefine n_unique_dst_out_24h -> new_counterparty_out_24h, and
+  src_n_senders_in_24h -> new_counterparty_in_24h. Computed via LAG() per (src,dst) pair:
+  a transaction counts as "new" if its (src,dst) pair had no prior transaction, or its
+  prior transaction was more than 24h before t.ts. Feature = count of such "new" pairs
+  for the account within [t.ts-24h, t.ts).
+- This is not identical to true distinct-counterparty-count (it does not decrement when
+  a previously-new pair ages out of the window in the same way; it counts newly-appearing
+  pairs, not currently-distinct pairs in-window). It is a standard AML signal in its own
+  right ("new counterparty rate") and is computable via a single windowed LAG, no self-join.
+- Renamed feature names logged here supersede #9 point 4's n_unique_dst_out / n_unique_src_in.
+
+
+## DECISION #9d — receiver naming, receiver new-counterparty, cold-start sums, FX estimator (2026-09-27, before Cell 4c)
+1. Naming: receiver (dst-side) features carry a dst_ prefix; sender features keep the
+   #9/#9a/#9c names. Receiver names: dst_in_cnt_1h/24h/7d, dst_in_sum_usd_1h/24h/7d,
+   dst_out_cnt_24h, dst_new_counterparty_in_24h (8).
+2. Receiver fan-in follows #9c: dst_n_senders_in_24h (#9a) -> dst_new_counterparty_in_24h
+   = number of transfers into dst within [t.ts-24h, t.ts) whose (src,dst) pair had no
+   earlier transfer, or whose previous transfer was more than 24h earlier. Same
+   single-LAG pair table as Cell 4b-2 (tie-break by id).
+3. Column mapping for Cell 4b-2 output, applied when features are assembled (4f):
+   n_new_dst_24h -> new_counterparty_out_24h; n_new_senders_in_24h ->
+   new_counterparty_in_24h. Definitions unchanged.
+4. Cold start (#3/#4, #9 point 5): a windowed sum is NULL when the account has no
+   earlier non-self-loop event in that direction at all (no history); it is 0 when
+   history exists but the window is empty. The distinction applies to sums only;
+   counts are 0 in both cases. Receiver sums: implemented in 4c by ASOF NULL
+   propagation (no earlier row in cum_in -> NULL). Sender sums: Cell 4a writes 0, so
+   4a and 4c are inconsistent until 4f. In 4f the "no history" flag for sender sums is
+   recomputed with the same ASOF-no-match logic against cum_out / cum_in; it is NOT
+   inferred from sender_features values (a 0 there cannot distinguish the two cases).
+5. FX estimator: Cell 2 fitted least squares on log(amt_received/amt_paid) of every
+   train cross-currency row, not on per-pair medians as #9 point 2 states. Rule fixed
+   before the check: rates from per-pair medians are computed; if every currency
+   differs by < 1% from the fitted rates (same threshold as the #9a day-1 check), the
+   fitted rates are kept and the measured divergence is logged in pilot_log.md (this
+   decision text is not edited afterwards). Otherwise stop and review before any
+   further feature code. Switching estimators would require re-running Cells 2, 4a,
+   4b-1, 4b-2 and all their checks.
+6. Final naming at assembly (Cell 4f): sender features gain a src_ prefix; receiver
+   features keep dst_. Applied via SELECT aliases in 4f together with the point-3
+   mapping; Cells 4a/4b-1/4b-2 are not re-run.
+7. dst_out_cnt_24h is the receiver's own outbound activity (dst acting as sender of
+   other transfers), a deliberate mixed-perspective feature from #9 point 4.
+8. Verification note: the Cell 4b-2 brute-force ordered "previous pair event" by ts
+   only, while the LAG orders by (ts, id). The 5 sample rows did not hit a same-minute
+   repeat of a pair, so it passed; the feature is correct, the check was weaker than
+   the code. The 4c and 4f brute-force checks order by (ts, id), matching the reference.

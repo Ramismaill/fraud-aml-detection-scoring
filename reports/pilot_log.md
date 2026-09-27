@@ -37,3 +37,9 @@
 - BAF gate (DECISION #2/#2a/#8): PASS.
 - Threshold drift: the 5%-FPR threshold from month 5 gives 6.0% FPR on months 6-7, consistent with the prevalence shift in the audit.
 - Fairness (report only): FPR 14.0% for customer_age >= 50 vs 4.5% below (ratio 0.32), a substantial difference by the pre-specified age grouping, similar to the ~3x reported for BAF in the handoff. customer_age is a model input; correlated features may also contribute. Mitigation is out of scope for the pilot.
+
+- Note (2026-09-27): DECISION #9c cell executed at In[16]; the successful Cell 4b-2 run is In[20] (saved execution_count in 05_aml_baseline_chrono.ipynb). #9c was registered before the final 4b-2 run; its position below 4b-2 in the notebook is layout only.
+- Note (2026-09-27): #9d registered before Cell 4c. FX estimator check: max divergence between fitted and per-pair-median rates = 0.7670% (< 1%); fitted rates kept.
+- Note (2026-09-27): the Cell 4b-2 brute-force ordered previous pair events by ts only; the LAG uses (ts, id). 96,324 (src,dst,minute) groups have >1 transfer (193,725 rows); the 5 sample rows did not hit one. Feature correct; check weaker than claimed. 4c/4f checks use (ts, id).
+- Note (2026-09-27): sum cold-start is inconsistent between 4a (0) and 4c (NULL) until 4f, which recomputes the no-history flag for sender sums via ASOF (#9d point 4).
+- Note (2026-09-27): Cell 4c done, 8 receiver features, 25/34. dst_out_cnt_24h = receiver's own outbound activity (mixed perspective, intentional, #9d point 7).
