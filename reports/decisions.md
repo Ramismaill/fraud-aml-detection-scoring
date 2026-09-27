@@ -476,3 +476,20 @@ for training.
    against new cum_in_new), Cell 4f (assembly with sender NULL mask per #9e + new
    names). The previously saved aml_features.parquet is invalid and must be
    regenerated after rebuild.
+
+
+### DECISION #9f — addendum (2026-09-27, after Muhammet's clarification)
+Clarification captured explicitly:
+- pair_seen_before_t (per transaction): strict past_ts < current_ts. Same-minute rows are
+  never history for each other, regardless of id order. NOT currently exposed as a boolean
+  feature in the 34-feature set.
+- pair_first_seen_timestamp (per pair): MIN(ts), one event per (src, dst). Used for all
+  aggregate n_first_seen_* features. Implementation: ROW_NUMBER=1 picks exactly one row
+  per pair (tie broken by id, only for row selection); cumulative counts use
+  upper_x = ts - 1 minute, so no transaction sees same-minute siblings.
+Empirically verified: on a same-minute duplicate pair (n=2+), only one row carries
+is_first_seen=TRUE; the aggregate n_first_seen_dst_24h for a later transaction matches
+the brute-force MIN(ts)-per-pair count exactly. If a per-transaction boolean
+"is_this_pair_new_to_me" is added in a future iteration, it must use strict ts < t and
+would diverge from ROW_NUMBER=1 for same-minute duplicates -- this is documented here
+so the two concepts do not get conflated.
