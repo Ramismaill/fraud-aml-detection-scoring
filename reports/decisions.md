@@ -214,3 +214,23 @@ Cross-dataset transfer is out of scope for this pilot.
 - Alternatives rejected: gating on full test (affected by the tail); deleting the tail
   everywhere (loses comparability); calendar-day split (test would be mostly tail).
 - Any change after this point is recorded as #6a, not by editing #6.
+
+
+## DECISION #7 — Two separate analyst queues, one common framework (Muhammet, 2026-09-27)
+- No single combined queue. Output = BAF Analyst Queue (account-opening fraud)
+  + AML Analyst Queue (transaction monitoring): different operational processes.
+- Common to both: risk ranking, risk bands, SHAP explanation cards, same evaluation logic.
+- Different unit of analysis: BAF ranks account-opening applications; AML ranks
+  transactions. Risk bands therefore carry different operational meaning in each
+  queue; thresholds are set per dataset (base rates differ ~10x).
+- No joint model: label semantics, feature space and time axis differ; cross-dataset
+  transfer is out of scope.
+- SHAP shows the model's attribution for a prediction, not the real-world cause;
+  with correlated features, credit can shift between them, so top features are
+  read as a group.
+- Replaces the single-queue diagram in the handoff (section 6).
+- Presentation flow (compress to 5-6 slides): volume -> manual review impossible ->
+  risk ranking -> rare events -> accuracy misleading -> data changes over time ->
+  chronological split -> leakage prevention -> success criteria fixed before results
+  -> BAF and AML evaluated independently -> separate ranked queues -> risk bands +
+  SHAP -> PASS / CONDITIONAL / FAIL.

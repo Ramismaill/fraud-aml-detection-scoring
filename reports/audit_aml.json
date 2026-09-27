@@ -1,0 +1,89 @@
+{
+  "rows": 5078345,
+  "laundering": 5177,
+  "time_range": [
+    "2022-09-01 00:00:00",
+    "2022-09-18 16:18:00"
+  ],
+  "distinct_accounts": 515088,
+  "exact_duplicate_rows": 9,
+  "self_loops": [
+    591212,
+    11
+  ],
+  "cross_currency": [
+    72170,
+    0
+  ],
+  "split_cuts": {
+    "cut60": "2022-09-06 13:36:00",
+    "cut80": "2022-09-08 16:12:00",
+    "tail_start": "2022-09-11"
+  },
+  "split": [
+    {
+      "split": "train",
+      "n": 3046861,
+      "n_laund": 2297.0,
+      "laund_pct": 0.0754,
+      "t_min": "2022-09-01 00:00:00",
+      "t_max": "2022-09-06 13:35:00",
+      "span_days": 5.57
+    },
+    {
+      "split": "valid",
+      "n": 1015602,
+      "n_laund": 1082.0,
+      "laund_pct": 0.1065,
+      "t_min": "2022-09-06 13:36:00",
+      "t_max": "2022-09-08 16:11:00",
+      "span_days": 2.11
+    },
+    {
+      "split": "test",
+      "n": 1015882,
+      "n_laund": 1798.0,
+      "laund_pct": 0.177,
+      "t_min": "2022-09-08 16:12:00",
+      "t_max": "2022-09-18 16:18:00",
+      "span_days": 10.0
+    }
+  ],
+  "pay_format": [
+    {
+      "pay_format": "Cheque",
+      "n": 1864331,
+      "n_laund": 324.0
+    },
+    {
+      "pay_format": "Credit Card",
+      "n": 1323324,
+      "n_laund": 206.0
+    },
+    {
+      "pay_format": "ACH",
+      "n": 600797,
+      "n_laund": 4483.0
+    },
+    {
+      "pay_format": "Cash",
+      "n": 490891,
+      "n_laund": 108.0
+    },
+    {
+      "pay_format": "Reinvestment",
+      "n": 481056,
+      "n_laund": 0.0
+    },
+    {
+      "pay_format": "Wire",
+      "n": 171855,
+      "n_laund": 0.0
+    },
+    {
+      "pay_format": "Bitcoin",
+      "n": 146091,
+      "n_laund": 56.0
+    }
+  ]
+}
