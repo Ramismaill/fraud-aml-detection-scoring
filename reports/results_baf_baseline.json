@@ -1,0 +1,56 @@
+{
+  "winner": "A",
+  "best_iteration": 141,
+  "validation_abc": [
+    {
+      "variant": "A",
+      "best_iter": 141,
+      "lgb_ap": 0.18521982847866306,
+      "prevalence": 0.01182504630289215,
+      "pr_auc": 0.18521982847866275,
+      "recall_at_5fpr": 0.5393338058114813,
+      "lift_at_1pct": 24.880770357204174,
+      "precision_at_100": 0.56,
+      "precision_at_500": 0.36
+    },
+    {
+      "variant": "B",
+      "best_iter": 115,
+      "lgb_ap": 0.1830518330299932,
+      "prevalence": 0.01182504630289215,
+      "pr_auc": 0.1830518330299933,
+      "recall_at_5fpr": 0.5393338058114813,
+      "lift_at_1pct": 22.895979559478487,
+      "precision_at_100": 0.57,
+      "precision_at_500": 0.362
+    },
+    {
+      "variant": "C",
+      "best_iter": 164,
+      "lgb_ap": 0.18781003915531802,
+      "prevalence": 0.01182504630289215,
+      "pr_auc": 0.1878100391553181,
+      "recall_at_5fpr": 0.5329553508150248,
+      "lift_at_1pct": 23.675718801442148,
+      "precision_at_100": 0.59,
+      "precision_at_500": 0.36
+    }
+  ],
+  "test": {
+    "prevalence": 0.014038271117159567,
+    "pr_auc": 0.1828605975512353,
+    "recall_at_5fpr": 0.545170257123002,
+    "lift_at_1pct": 20.67518856251801,
+    "precision_at_100": 0.54,
+    "precision_at_500": 0.412,
+    "pr_auc_x_prevalence": 13.025863087066123,
+    "valid_threshold": 0.027968493720802935,
+    "fpr_at_valid_thr": 0.06033156387131245,
+    "recall_at_valid_thr": 0.5753995830437804,
+    "fpr_age_ge50": 0.13995120463555963,
+    "fpr_age_lt50": 0.04491475880313919,
+    "fpr_ratio_min_over_max": 0.3209315626835768,
+    "n_neg_age_ge50": 32790,
+    "n_fraud_age_ge50": 989
+  }
+}
