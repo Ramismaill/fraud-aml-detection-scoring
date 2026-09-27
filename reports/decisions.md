@@ -414,3 +414,65 @@ scored (self-loops and tail included); gating uses test_core only.
    only, while the LAG orders by (ts, id). The 5 sample rows did not hit a same-minute
    repeat of a pair, so it passed; the feature is correct, the check was weaker than
    the code. The 4c and 4f brute-force checks order by (ts, id), matching the reference.
+
+
+## DECISION #9e — Sender-side cold-start NULL fix implemented at assembly (2026-09-27)
+#9d point 4 promised that sender-side sums would be normalized from 0 (Cell 4a's 
+COALESCE encoding) to NULL at assembly, when the account has no prior history at all 
+in the relevant direction. The first 4f attempt joined sender_features as-is and did 
+not implement this.
+Detection: a cross-side diagnostic compared null fraction per day for the same 
+semantic field (in_sum_usd_24h) on sender vs receiver side. Sender showed 0.0% NULL 
+on every day; receiver declined from 56.1% (day 1) to <1% (day 6). The asymmetry 
+exposed the missing fix -- neither side's own invariants would have caught this.
+Fix (at assembly, Cell 4f): an ASOF-based mask over cum_out and cum_in, joined at 
+t.upper_x with no lower bound. If no match, the account has no prior history at all 
+in that direction, and the corresponding sum columns become NULL.
+Affected features (8):
+  out_sum_usd_{1h,24h,7d} (3)
+  in_sum_usd_{1h,24h,7d} (3)
+  pass_through_24h (1)
+  amt_over_inflow_24h (1)
+Counts (out_cnt_*, in_cnt_*) remain 0 in both cases; that is correct and unchanged.
+The first aml_features.parquet (saved before this fix) is invalid for training and 
+must be regenerated.
+Not a policy change: implements #9d point 4 as registered. Documented separately 
+because the assembled table changes and the corrected parquet must be the one used 
+for training.
+
+
+## DECISION #9f — New-counterparty definition, same-minute eligibility, self-loop age (2026-09-27, before AML training)
+1. New-counterparty definition changed from #9c's "no prior OR gap > 24h" to
+   "first occurrence ever" (standard AML definition, per Muhammet's review).
+   Verified impact (Task 2): on the full non-self-loop pair-event set (4,487,133 rows),
+   old definition flagged 1,613,573 (35.96%) as new; new definition flags 647,939
+   (14.44%). Difference: 965,634 rows / 21.52 percentage points -- material.
+   Implementation: ROW_NUMBER() OVER (PARTITION BY src, dst ORDER BY ts, id) = 1.
+   Verified (Task 1b) on controlled test (A->X, A->Y, A->X): row 3 (second A->X)
+   yields rn=2, is_first=False. Partition mechanics apply to ROW_NUMBER as expected.
+   Feature names updated:
+     n_new_dst_24h        -> n_first_seen_dst_24h
+     n_new_senders_in_24h -> n_first_seen_senders_in_24h
+     dst_new_counterparty_in_24h -> dst_first_seen_in_24h
+     sender_new_counterparty_24h (table) -> sender_first_seen_24h
+2. Same-minute eligibility: strict ts < t.ts. No same-minute row is history for
+   another. The ROW_NUMBER=1 implementation marks exactly one row per (src, dst)
+   partition as "first ever". id serves only as a deterministic tiebreak for which
+   row carries the "first" label; it does not grant chronological visibility.
+3. Self-loops in observed_age (Muhammet's request): self-loops remain excluded from
+   all transaction/flow aggregates (#9 point 3, unchanged). They ARE counted toward
+   first-seen timestamp for src_observed_age_hours / dst_observed_age_hours.
+   Verified defect in current 4d (Task 3): account 01729_80066E7B0's first dataset
+   appearance is a self-loop at 2022-09-01 00:02:00; its first non-self outbound is
+   5 days later (2022-09-06 03:21:00). Cell 4d's stored src_observed_age_hours is
+   NULL for all rows until the first non-self event, i.e. self-loops are excluded
+   from first-seen. This must be corrected: 4d will be re-run with self-loop-
+   inclusive first-seen. Name stays observed_age.
+4. FX train-only confirmed: Cell 2's fx_train query filters ts < TRAIN_CUTOFF;
+   the day-1-vs-full-train stability check also used train-period data only. No
+   validation/test data entered FX rate estimation.
+5. Rebuild plan (execution order): Cell 4b-2 (ROW_NUMBER, renamed table + columns),
+   Cell 4d (self-loop-inclusive first-seen), Cell 4c (rebuild receiver_features
+   against new cum_in_new), Cell 4f (assembly with sender NULL mask per #9e + new
+   names). The previously saved aml_features.parquet is invalid and must be
+   regenerated after rebuild.
